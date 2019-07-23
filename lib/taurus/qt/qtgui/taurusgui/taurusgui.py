@@ -168,11 +168,6 @@ class DockWidgetPanel(Qt.QDockWidget, TaurusBaseWidget):
                 except Exception as e:
                     raise RuntimeError(
                         'Cannot create widget from classname "%s". Reason: %s' % (classname, repr(e)))
-            # set customwidgetmap if necessary
-            if hasattr(w, "setCustomWidgetMap") and hasattr(w, "getCustomWidgetMap"):
-                tmp = self._mainwindow.getCustomWidgetMap()
-                tmp.update(w.getCustomWidgetMap())
-                w.setCustomWidgetMap(tmp)
             self.setWidget(w)
             wname = "%s-%s" % (str(self.objectName()), str(classname))
             w.setObjectName(wname)
@@ -834,10 +829,6 @@ class TaurusGui(TaurusMainWindow):
             if not ok:
                 return
         w = paneldesc.getWidget(sdm=Qt.qApp.SDM, setModel=False)
-        if hasattr(w, "setCustomWidgetMap") and hasattr(w, "getCustomWidgetMap"):
-            tmp = self.getCustomWidgetMap()
-            tmp.update(w.getCustomWidgetMap())
-            w.setCustomWidgetMap(tmp)
         if paneldesc.model is not None:
             w.setModel(paneldesc.model)
         if isinstance(w, TaurusBaseComponent):
@@ -1291,8 +1282,10 @@ class TaurusGui(TaurusMainWindow):
                 except AttributeError:
                     pass
                 w = p.getWidget(sdm=Qt.qApp.SDM, setModel=False)
-                if hasattr(w, "setCustomWidgetMap"):
-                    w.setCustomWidgetMap(self.getCustomWidgetMap())
+                if hasattr(w, "setCustomWidgetMap") and hasattr(w, "getCustomWidgetMap"):
+                    tmp = self.getCustomWidgetMap()
+                    tmp.update(w.getCustomWidgetMap())
+                    w.setCustomWidgetMap(tmp)
                 if p.model is not None:
                     w.setModel(p.model)
                 if p.instrumentkey is None:
