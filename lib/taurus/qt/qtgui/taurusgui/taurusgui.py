@@ -191,6 +191,10 @@ class DockWidgetPanel(Qt.QDockWidget, TaurusBaseWidget):
                 'widgetClassName'), modulename=configdict.get('widgetModuleName', None))
             if isinstance(self.widget(), BaseConfigurableClass):
                 self.widget().applyConfig(configdict['widget'])
+            if hasattr(w, "setCustomWidgetMap") and hasattr(w, "getCustomWidgetMap"):
+                tmp = self._mainwindow.getCustomWidgetMap()
+                tmp.update(w.getCustomWidgetMap())
+                w.setCustomWidgetMap(tmp)
         except Exception as e:
             self.info(
                 'Failed to set the widget for this panel. Reason: %s' % repr(e))
