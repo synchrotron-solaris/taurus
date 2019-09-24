@@ -1287,9 +1287,9 @@ class TaurusGui(TaurusMainWindow):
                     pass
                 w = p.getWidget(sdm=Qt.qApp.SDM, setModel=False)
                 if hasattr(w, "setCustomWidgetMap") and hasattr(w, "getCustomWidgetMap"):
-                    tmp = self.getCustomWidgetMap()
-                    tmp.update(w.getCustomWidgetMap())
-                    w.setCustomWidgetMap(tmp)
+                    widget_map = self.getCustomWidgetMap()
+                    widget_map.update(w.getCustomWidgetMap())
+                    w.setCustomWidgetMap(widget_map)
                 if p.model is not None:
                     w.setModel(p.model)
                 if p.instrumentkey is None:
