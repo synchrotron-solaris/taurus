@@ -194,7 +194,7 @@ class DockWidgetPanel(Qt.QDockWidget, TaurusBaseWidget):
             if hasattr(self.widget(), "setCustomWidgetMap") and hasattr(w, "getCustomWidgetMap"):
                 widget_map = self._mainwindow.getCustomWidgetMap()
                 widget_map.update(w.getCustomWidgetMap())
-                w.setCustomWidgetMap(widget_map)
+                self.widget().setCustomWidgetMap(widget_map)
         except Exception as e:
             self.info(
                 'Failed to set the widget for this panel. Reason: %s' % repr(e))
@@ -838,6 +838,10 @@ class TaurusGui(TaurusMainWindow):
         if isinstance(w, TaurusBaseComponent):
             w.setModifiableByUser(True)
             w.setModelInConfig(True)
+        if hasattr(w, "setCustomWidgetMap") and hasattr(w, "getCustomWidgetMap"):
+            widget_map = self._mainwindow.getCustomWidgetMap()
+            widget_map.update(w.getCustomWidgetMap())
+            w.setCustomWidgetMap(widget_map)
 
         self.createPanel(w, paneldesc.name, floating=paneldesc.floating, custom=True,
                          registerconfig=False, instrumentkey=paneldesc.instrumentkey,
