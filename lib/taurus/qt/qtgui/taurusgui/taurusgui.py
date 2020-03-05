@@ -362,12 +362,16 @@ class TaurusGui(TaurusMainWindow):
         self.newShortMessage.emit(msg)
 
         if self.defaultConfigRecursionDepth >= 0:
-            Qt.QMessageBox.information(self, "Fail-proof mode",
-                                       ('Running in fail-proof mode.' +
-                                        '\nLoading of potentially problematic settings is disabled.' +
-                                        '\nSome panels may not be loaded or may ignore previous user configuration' +
-                                        '\nThis will also apply when loading perspectives'),
-                                       Qt.QMessageBox.Ok, Qt.QMessageBox.NoButton)
+            self.newShortMessage.emit(
+                "Running in Safe Mode. Settings not loaded"
+            )
+            self.warning(
+                "Safe mode: \n"
+                + '\n\tLoading of potentially problematic settings is disabled.'
+                + '\n\tSome panels may not be loaded or may ignore previous '
+                + 'user configuration'
+                + '\n\tThis will also apply when loading perspectives'
+            )
 
     def closeEvent(self, event):
         try:
@@ -835,7 +839,9 @@ class TaurusGui(TaurusMainWindow):
         w = paneldesc.getWidget(sdm=Qt.qApp.SDM, setModel=False)
         if paneldesc.model is not None:
             w.setModel(paneldesc.model)
+
         if isinstance(w, TaurusBaseComponent):
+            # TODO: allow to select these options in the dialog
             w.setModifiableByUser(True)
             w.setModelInConfig(True)
         if hasattr(w, "setCustomWidgetMap") and hasattr(w, "getCustomWidgetMap"):
@@ -1238,14 +1244,14 @@ class TaurusGui(TaurusMainWindow):
     
     def _loadSynoptic(self, conf, xmlroot):
         # Synoptics
-        synoptic = getattr(conf, 'synoptic', None)
+        synoptic = getattr(conf, 'SYNOPTIC', None)
         if isinstance(synoptic, string_types):  # old config file style
             self.warning(
                 'Deprecated usage of synoptic keyword (now it expects a list of paths). Please update your configuration file to: "synoptic=[\'%s\']".' % synoptic)
             synoptic = [synoptic]
         if synoptic is None:  # we look in the xml config file if not present in the python config
             synoptic = []
-            node = xmlroot.find("synoptic")
+            node = xmlroot.find("SYNOPTIC")
             if (node is not None) and (node.text is not None):
                 for child in node:
                     s = child.get("str")
@@ -1290,20 +1296,58 @@ class TaurusGui(TaurusMainWindow):
                 except AttributeError:
                     pass
                 w = p.getWidget(sdm=Qt.qApp.SDM, setModel=False)
+
+                for key, value in p.widget_properties.items():
+                    # set additional configuration for the
+                    if hasattr(w, key):
+                        try:
+                            setattr(w, key, value)
+                        except Exception as e:
+                            msg = "Cannot set %r.%s=%s" % (w, key, str(value))
+                            self.error(msg)
+                            self.traceback(level=taurus.Info)
+                            result = Qt.QMessageBox.critical(
+                                self,
+                                "Initialization error",
+                                "%s\n\n%r" % (msg, e),
+                                Qt.QMessageBox.Abort | Qt.QMessageBox.Ignore
+                            )
+                            if result == Qt.QMessageBox.Abort:
+                                sys.exit()
+
                 if hasattr(w, "setCustomWidgetMap") and hasattr(w, "getCustomWidgetMap"):
                     widget_map = self.getCustomWidgetMap()
                     widget_map.update(w.getCustomWidgetMap())
                     w.setCustomWidgetMap(widget_map)
+
                 if p.model is not None:
                     w.setModel(p.model)
                 if p.instrumentkey is None:
                     instrumentkey = self.IMPLICIT_ASSOCIATION
+
+                if isinstance(w, TaurusBaseComponent):
+                    if p.modifiable_by_user is not None:
+                        w.setModifiableByUser(p.modifiable_by_user)
+                    if p.model_in_config is not None:
+                        w.setModelInConfig(p.model_in_config)
+                    if p.widget_formatter is not None:
+                        w.setFormat(p.widget_formatter)
+
+                icon = p.icon
                 # the pool instruments may change when the pool config changes,
                 # so we do not store their config
                 registerconfig = p not in poolinstruments
                 # create a panel
-                self.createPanel(w, p.name, floating=p.floating, registerconfig=registerconfig,
-                                 instrumentkey=instrumentkey, permanent=True)
+
+                self.createPanel(
+                    w,
+                    p.name,
+                    floating=p.floating,
+                    registerconfig=registerconfig,
+                    instrumentkey=instrumentkey,
+                    permanent=True,
+                    icon=icon
+                )
             except Exception as e:
                 msg = "Cannot create panel %s" % getattr(
                     p, "name", "__Unknown__")
